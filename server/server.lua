@@ -123,27 +123,22 @@ exports('checkItemZone', function(playerId, item)
     return isPlayerInValidZone(playerId, item)
 end)
 
+AddEventHandler('ox_inventory:usedItem', function(playerId, name, slotId, metadata)
+    if Config.RestrictedItems[name] then
+        if not isPlayerInValidZone(playerId, name) then
+            local restricted = Config.RestrictedItems[name]
+            inv:AddItem(playerId, name, 1, metadata)
+            TriggerClientEvent('ox_lib:notify', playerId, {
+                title = 'Item Restricted',
+                description = restricted.message or "This item is restricted in this area",
+                type = 'error'
+            })
+        end
+    end
+end)
+
 AddEventHandler('onServerResourceStart', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
-    
-    if Config == nil then
-        Config = {
-            RestrictedItems = {},
-            Debug = false,
-            ValidationInterval = 5000,
-            PositionUpdateInterval = 1000,
-            CooldownTimes = {
-                short = 500,
-                long = 1000
-            }
-        }
-    end
-    
-    for item in pairs(Config.RestrictedItems) do
-        inv.registerUsage(item, function(playerId)
-            return isPlayerInValidZone(playerId, item)
-        end)
-    end
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)
