@@ -1,5 +1,6 @@
 local playerZones = {}
 local inv = exports.ox_inventory
+local Config = require 'config'
 
 local function validateSource(source)
     return source and source > 0 and GetPlayerPed(source) ~= 0
@@ -52,48 +53,8 @@ RegisterNetEvent('s-zoneitem:exitZone', function(item, zoneId)
     end
 end)
 
-local function verifyPlayerInZone(coords, zone)
-    return #(coords - zone.coords) <= zone.radius
-end
-
 local function isPlayerInValidZone(playerId, item)
-    if not validateSource(playerId) or not playerZones[playerId] or not playerZones[playerId][item] then return false end
-    
-    local itemConfig = Config.RestrictedItems[item]
-    if not itemConfig or not itemConfig.zones then return false end
-    
-    local playerCoords = GetEntityCoords(GetPlayerPed(playerId))
-    if not playerCoords then return false end
-    
-    local validZoneFound = false
-    local toRemove = {}
-    
-    for zoneId in pairs(playerZones[playerId][item]) do
-        local index = tonumber(zoneId:match("_(%d+)$"))
-        
-        if index and itemConfig.zones[index] then
-            if verifyPlayerInZone(playerCoords, itemConfig.zones[index]) then
-                validZoneFound = true
-            else
-                toRemove[zoneId] = true
-            end
-        else
-            toRemove[zoneId] = true
-        end
-    end
-    
-    for zoneId in pairs(toRemove) do
-        playerZones[playerId][item][zoneId] = nil
-    end
-    
-    if next(playerZones[playerId][item]) == nil then
-        playerZones[playerId][item] = nil
-        if next(playerZones[playerId]) == nil then
-            playerZones[playerId] = nil
-        end
-    end
-    
-    return validZoneFound
+    return playerZones[playerId] and playerZones[playerId][item] and next(playerZones[playerId][item]) ~= nil
 end
 
 RegisterNetEvent('s-zoneitem:verifyUsage', function(item)
@@ -106,7 +67,7 @@ RegisterNetEvent('s-zoneitem:verifyUsage', function(item)
     local isInZone = isPlayerInValidZone(playerId, item)
     
     if not isInZone then
-        TriggerClientEvent('ox_lib:notify', playerId, {
+        lib.notify(playerId,{
             title = 'Item Restricted',
             description = restricted.message or "This item is restricted in this area",
             type = 'error'
@@ -137,9 +98,6 @@ AddEventHandler('ox_inventory:usedItem', function(playerId, name, slotId, metada
     end
 end)
 
-AddEventHandler('onServerResourceStart', function(resourceName)
-    if GetCurrentResourceName() ~= resourceName then return end
-end)
 
 AddEventHandler('onResourceStop', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end

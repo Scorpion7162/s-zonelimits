@@ -1,8 +1,7 @@
 local activeZones, currentZones, cooldowns = {}, {}, {}
-local playerPed = PlayerPedId()
-local cachedCoords = GetEntityCoords(playerPed)
 local DEFAULT_COOLDOWN_SHORT = 500
 local DEFAULT_COOLDOWN_LONG = 1000
+local Config = require 'config'
 
 local function isInRestrictedZone(item)
     return currentZones[item] and next(currentZones[item]) ~= nil
@@ -143,36 +142,7 @@ AddEventHandler('ox_inventory:usedItem', function(data)
     end
 end)
 
-CreateThread(function()
-    local validationInterval = Config and Config.ValidationInterval or 5000
-    local positionUpdateInterval = Config and Config.PositionUpdateInterval or 1000
-    local nextValidation, nextPositionUpdate = 0, 0
-    
-    while true do
-        local hasActiveZones = next(currentZones) ~= nil
-        local waitTime = hasActiveZones and 250 or 500
-        
-        Wait(waitTime)
-        
-        local gameTime = GetGameTimer()
-        
-        if gameTime > nextPositionUpdate then
-            nextPositionUpdate = gameTime + positionUpdateInterval
-            playerPed = PlayerPedId()
-            cachedCoords = GetEntityCoords(playerPed)
-        end
-        
-        if hasActiveZones and gameTime > nextValidation then
-            nextValidation = gameTime + validationInterval
-            
-            for item in pairs(currentZones) do
-                if not Config.RestrictedItems[item] then
-                    currentZones[item] = nil
-                end
-            end
-        end
-    end
-end)
-
 exports('isInItemZone', isInRestrictedZone)
-exports('getPlayerZones', function() return currentZones end)
+exports('getPlayerZones', function()
+     return currentZones
+end)
